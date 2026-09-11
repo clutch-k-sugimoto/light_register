@@ -48,7 +48,8 @@
 
 - 現在の開発環境はFlutter 3.47.3 / Dart 3.13.3。環境を再現する場合はこのバージョンを基準とし、更新が必要な場合は互換性を確認する。最低対応OSはiOS 15.0・Android API 24。以前のバージョンでの検証は `README.md` の履歴と区別する。
 - 別PCでは `flutter --version` と `flutter doctor` で環境を確認し、`flutter pub get` で依存関係を取得する。理由なく依存関係やロックファイルを更新しない。
-- AndroidビルドではGradleとJDKの互換性を確認する。現在はGradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / JDK 26.0.2.1 / NDK 30.0.16248370を使用する。KotlinはAGP組み込み機能を使用し、Flutterとの互換性のため `android.newDsl=false` を維持する。`flutter doctor -v` で実際に選択されたJavaを確認する。設定方法は `README.md` の「WindowsでAndroidを実行する場合」を参照する。
+- `.fvmrc` はFlutter 3.47.3を指定している。FVMを使う場合はプロジェクト直下でSDKを準備し、下記コマンドの `flutter`・`dart` を `fvm flutter`・`fvm dart` に読み替える。Android統合テスト用スクリプトは子プロセスにもSDKを適用するため `fvm exec dart run tool/test_android_integration.dart DEVICE_ID` を使う。ホーム階層や他プロジェクトのSDK設定を変更しない。
+- AndroidビルドではGradleとJDKの互換性を確認する。現在はGradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK 30.0.16248370を使用する。ビルド用JDKはWindowsで26.0.2.1、MacでAndroid Studio付属の21.0.8を使用する。KotlinはAGP組み込み機能を使用し、Flutterとの互換性のため `android.newDsl=false` を維持する。`flutter doctor -v` で実際に選択されたJavaを確認する。設定方法は `README.md` の「WindowsでAndroidを実行する場合」を参照する。
 - 個人の絶対パス、Flutter SDKの設置場所、シミュレータIDを固定しない。実行対象は `flutter devices` で確認する。iOSのビルド・実行にはMacとXcodeが必要である。
 - Dartコードを変更した場合は変更ファイルを整形し、静的解析と影響範囲に応じたテストを実行する。バグ修正では、可能な範囲で実際の再現シナリオを回帰テストにする。
 - 画面のテストでは、表示の存在確認だけでなく、タップ・スクロール・数量・会計結果など、変更対象の操作と結果を確認する。横画面の既存回帰ケースは844×390・667×375、画面回転、安全領域、文字1.3倍を含む。

@@ -1,5 +1,6 @@
 .DS_Store
 .dart_tool/
+.fvm/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages

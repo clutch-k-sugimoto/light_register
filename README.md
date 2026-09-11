@@ -56,7 +56,7 @@ iOS・Android向けの出店用レジです。Flutterで画面と処理をアプ
 
 ## 開発・起動
 
-開発環境は Flutter 3.47.3 / Dart 3.13.3 です。Flutterの対応範囲に合わせ、iOSの最低バージョンは15.0、Androidの最低APIレベルは24です。iOS 13・14は対象外になりました。更新後のiOSビルド・実行はMacでの再検証が必要です。
+開発環境は Flutter 3.47.3 / Dart 3.13.3 です。Flutterの対応範囲に合わせ、iOSの最低バージョンは15.0、Androidの最低APIレベルは24です。iOS 13・14は対象外になりました。
 
 | ツール | 更新後のバージョン |
 | --- | --- |
@@ -64,9 +64,9 @@ iOS・Android向けの出店用レジです。Flutterで画面と処理をアプ
 | Gradle | 9.7.1（配布ZIPのSHA-256検証あり） |
 | Android Gradle Plugin（AGP） | 9.4.0 |
 | Kotlin | 2.4.20（AGPの組み込みKotlinを使用） |
-| Androidビルド用JDK | Oracle JDK 26.0.2.1 |
+| Androidビルド用JDK | Windows：Oracle JDK 26.0.2.1 / Mac：Android Studio付属のOpenJDK 21.0.8 |
 | Android NDK | r30 / 30.0.16248370 |
-| Android Studio | Quail 4 / 2026.1.4 |
+| Android Studio | Windows：Quail 4 / 2026.1.4 / Mac：2025.2 |
 
 AndroidのcompileSdk・targetSdkはFlutter既定値の36を使用します。Java・Kotlinの出力バイトコードは既存のJava 11相当を維持し、ビルドを実行するJDKとは区別します。Flutterプラグインとの互換性のため `android.newDsl=false` を設定しています。
 
@@ -76,6 +76,24 @@ AndroidのcompileSdk・targetSdkはFlutter既定値の36を使用します。Jav
 flutter pub get
 flutter run -d <device-id>
 ```
+
+### FVMでプロジェクトのSDKを選択する場合
+
+`.fvmrc` にFlutter 3.47.3を指定しています。FVMを導入済みのPCでは、プロジェクト直下で次を実行してください。システム全体の既定Flutterを変更せず、このプロジェクトで使用するSDKを選択できます。通常の `flutter`・`dart` は引き続きPATH上のSDKを使用するため、FVM管理時は `fvm flutter`・`fvm dart` を使用してください。
+
+```sh
+fvm install
+fvm use 3.47.3
+fvm flutter --version
+fvm flutter doctor -v
+fvm flutter pub get
+fvm flutter run -d <device-id> --target lib/main.dart
+
+# スクリプト内から呼ぶFlutterにも同じSDKを適用
+fvm exec dart run tool/test_android_integration.dart <device-id>
+```
+
+`.fvm/` はPCごとに生成するためGit管理対象外です。VS Codeの `.vscode/settings.json` はプロジェクト内のFVM SDKを参照します。FVMを使用しない場合は、Flutter 3.47.3の `bin` をPATHに設定し、VS CodeのFlutter SDK設定も実際の配置に合わせてください。
 
 SQLiteプラグインを使用するため、対象はiOS・Androidです。Web向けの実装はありません。
 
@@ -155,7 +173,23 @@ Android 16以降を対象とするアプリでは、幅600dp以上の画面で�
 - `flutter doctor -v`：Android toolchain正常、Androidライセンス受諾済み。Windowsデスクトップ用Visual Studioの未導入のみ指摘されるが、このプロジェクトの対象OSには含めていない。
 - 残る警告はGradleのJava native access、およびFlutterが使用するAGPの旧DSL・既存Jetifier設定の非推奨通知。ビルド失敗は発生していない。
 
-iOSの最低バージョン設定はFlutterの移行処理に合わせ15.0へ更新し、plistのXML構文を確認した。WindowsではXcode/CocoaPodsを実行できないため、更新後のiOSビルド・統合テストと `ios/Podfile.lock` の再生成は未実施。Macでは `flutter pub get` の後に `cd ios && pod install` を実行し、プロジェクト直下へ戻ってiOSビルド・統合テストを行うこと。実機・ストア配布・署名も未検証。
+iOSの最低バージョン設定はFlutterの移行処理に合わせ15.0へ更新し、plistのXML構文を確認した。このWindowsでの検証時点では、Xcode/CocoaPodsを実行できないため、更新後のiOSビルド・統合テストと `ios/Podfile.lock` の再生成は未実施だった。以降のMacでの検証結果は次節を参照。実機・ストア配布・署名は未検証。
+
+## バージョン更新後のMacでの再構築（2026-09-12）
+
+- 環境：macOS 26.6.2（Apple Silicon）、Flutter 3.47.3 / Dart 3.13.3、Xcode 26.6、CocoaPods 1.16.2。AndroidはAndroid Studio 2025.2付属のOpenJDK 21.0.8、Gradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK 30.0.16248370を使用。
+- Flutter 3.47.3を追加し、`flutter clean`、`flutter pub get`、iOS・Android用ビルド資材の取得、`ios/` での `pod install` を実行。`pubspec.lock` は変更なし。`.fvmrc` とVS Code設定でプロジェクトのSDKを選択し、Macの既定Flutter 3.35.7は維持した。
+- `fvm exec flutter doctor -v`：指摘なし。`flutter analyze --no-pub`：指摘なし。`flutter test --no-pub --reporter expanded`：既存23件すべて成功。
+- iOS初回ビルドでFlutterがSwift Package Manager連携とUIScene対応を自動移行した。SQLite・統合テストプラグインはSwift Packageとして組み込まれ、`ios/Podfile.lock` は再生成された。既存のCocoaPods設定は維持しており、Flutterから完全移行を案内する通知と、`pod install` 時の既存xcconfigに関する警告が出るが、下記のdebugビルド・統合テストは成功した。
+- iPhone 17 / iOS 26.5シミュレータの統合テスト：成功。独立した一時DBで注文復元、画面回転、数量増減、会計・釣り銭、売上復元、売上消去・全消去を確認。
+- 統合テスト後に `fvm flutter build ios --simulator --debug --no-codesign --target lib/main.dart --no-pub`：成功。通常アプリをシミュレータへインストール・起動し、初期画面を確認した。
+- AndroidのNDK初回導入では別のGradleプロセスによる同時導入をログで確認し、展開失敗と必須ファイル欠落が発生した。不完全なNDK r30を一時ディレクトリへ退避し、ほかの導入処理が動いていない状態でSDK Managerから再導入して修復した。`source.properties`、CMake設定、Clangの起動を確認。Build Tools 36.0.0も追加取得した。
+- `fvm exec dart run tool/test_android_integration.dart <device-id>`：Pixel 8 Pro / Android 16（API 36）エミュレータで成功。機内モードON・Wi-Fi OFFの状態で独立した一時DBを使い、iOSと同じ操作シナリオと実際の画面回転を確認。テスト用スクリプトによる回転設定の復元も確認した。
+- 統合テスト後に `fvm flutter build apk --debug --target lib/main.dart --no-pub`：成功。通常起動用APKは `build/app/outputs/flutter-apk/app-debug.apk`、iOSシミュレータ用アプリは `build/ios/iphonesimulator/Runner.app` に生成される。ビルド成果物はGit管理対象外。
+- 通常版APKをエミュレータへインストールし、オフラインで起動・初期画面を確認。エミュレータ起動直後のSystem UI・電話プロセスのANR記録と、残っていたSystem UIの通知を確認したが、通知の「Wait」を選択後はレジ画面が表示された。確認したログではレジアプリのANR、Flutter・AndroidRuntimeのエラーはなかった。検証後は通信設定を機内モードOFF・Wi-Fi ONへ復元した。
+- `git diff --check`、iOSのplist・Xcodeプロジェクト・共有schemeの構文確認：成功。
+
+実機、OSによるプロセス強制終了、releaseビルド、ストア配布・署名は今回検証していない。
 
 ## 配布と現状の範囲
 
