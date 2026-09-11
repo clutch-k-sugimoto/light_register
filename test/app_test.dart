@@ -95,6 +95,59 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('最後の商品の販売終了後に検索条件をリセットし、新商品を注文できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await database.saveProduct(
+      const Product(id: 'ice', name: 'かき氷', price: 350, category: '甘味'),
+    );
+    await tester.pumpWidget(RegisterApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('product-search')), 'かき氷');
+    await tester.tap(find.widgetWithText(ChoiceChip, '甘味'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品管理').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('edit-ice')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('この商品の販売を終了'));
+    await tester.tap(find.text('この商品の販売を終了'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('販売を終了'));
+    await tester.pumpAndSettle();
+    expect(controller.products, isEmpty);
+    await tester.tap(find.text('レジ').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('product-search')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('first-product')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('product-name')), '焼きそば');
+    await tester.enterText(find.byKey(const Key('product-price')), '500');
+    await tester.enterText(find.byKey(const Key('product-category')), 'フード');
+    await tester.ensureVisible(find.byKey(const Key('save-product')));
+    await tester.tap(find.byKey(const Key('save-product')));
+    await tester.pumpAndSettle();
+    final search = tester.widget<EditableText>(
+      find.descendant(
+        of: find.byKey(const Key('product-search')),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(search.controller.text, isEmpty);
+    final product = find.byKey(Key('product-${controller.products.single.id}'));
+    expect(product.hitTestable(), findsOneWidget);
+    await tester.tap(product);
+    await tester.pumpAndSettle();
+    expect(controller.order.quantity, 1);
+    expect(controller.order.total, 500);
+    expect((await database.order()).lines.single.name, '焼きそば');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('タブレットでは商品と注文を同時に表示し数量変更できる', (tester) async {
     tester.view.physicalSize = const Size(1194, 834);
     tester.view.devicePixelRatio = 1;

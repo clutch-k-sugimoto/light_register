@@ -85,8 +85,8 @@ class OrderLine {
   final int quantity;
   final String category;
   int get total => unitPrice * quantity;
-  // Different prices for the same product remain distinct in the current order.
-  String get key => '$productId:$unitPrice:$name';
+  // Keep different snapshots separate, even when names contain delimiters.
+  String get key => jsonEncode([productId, unitPrice, name, category]);
   OrderLine withQuantity(int value) => OrderLine(
     productId: productId,
     name: name,

@@ -15,81 +15,94 @@ class ProductsPage extends StatelessWidget {
   final Future<void> Function([Product? product]) onEdit;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 24,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('商品管理', style: Theme.of(context).textTheme.headlineMedium),
-            FilledButton.icon(
-              key: const Key('new-product'),
-              onPressed: () => onEdit(),
-              icon: const Icon(Icons.add),
-              label: const Text('商品を登録'),
-            ),
-          ],
+  Widget build(BuildContext context) => CustomScrollView(
+    key: const Key('products-management-scroll'),
+    slivers: [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+        sliver: SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 24,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '商品管理',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  FilledButton.icon(
+                    key: const Key('new-product'),
+                    onPressed: () => onEdit(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('商品を登録'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${controller.products.length}商品 · 価格は税込',
+                style: const TextStyle(color: muted),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '${controller.products.length}商品 · 価格は税込',
-          style: const TextStyle(color: muted),
-        ),
-        const SizedBox(height: 22),
-        Expanded(
-          child: controller.products.isEmpty
-              ? const EmptyState(
-                  icon: Icons.sell_outlined,
-                  title: '販売する商品を登録',
-                  message: '商品名と販売価格を登録すると、\nレジに商品ボタンが並びます。',
-                )
-              : ListView.separated(
-                  itemCount: controller.products.length,
-                  separatorBuilder: (_, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final product = controller.products[index];
-                    return Surface(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: ListTile(
-                        key: Key('edit-${product.id}'),
-                        onTap: () => onEdit(product),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 6,
-                        ),
-                        leading: Container(
-                          width: 44,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Color(
-                              productColors[product.color],
-                            ).withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.sell_outlined, color: ink),
-                        ),
-                        title: Text(
-                          product.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          '${product.category.isEmpty ? '未分類' : product.category} · ${yen(product.price)}',
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                      ),
-                    );
-                  },
+      ),
+      if (controller.products.isEmpty)
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyState(
+            icon: Icons.sell_outlined,
+            title: '販売する商品を登録',
+            message: '商品名と販売価格を登録すると、\nレジに商品ボタンが並びます。',
+          ),
+        )
+      else
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          sliver: SliverList.separated(
+            itemCount: controller.products.length,
+            separatorBuilder: (_, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final product = controller.products[index];
+              return Surface(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
+                child: ListTile(
+                  key: Key('edit-${product.id}'),
+                  onTap: () => onEdit(product),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  leading: Container(
+                    width: 44,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Color(productColors[product.color])
+                          .withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.sell_outlined, color: ink),
+                  ),
+                  title: Text(
+                    product.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    '${product.category.isEmpty ? '未分類' : product.category} · ${yen(product.price)}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                ),
+              );
+            },
+          ),
         ),
-      ],
-    ),
+    ],
   );
 }
 

@@ -88,6 +88,71 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('商品管理は横画面で末尾の商品を編集し、キーボード表示中も保存できる', (tester) async {
+    tester.view.physicalSize = const Size(667, 375);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(RegisterApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('商品管理').last);
+    await tester.pumpAndSettle();
+    final productScroll = find.descendant(
+      of: find.byKey(const Key('products-management-scroll')),
+      matching: find.byType(Scrollable),
+    );
+    final lastProduct = find.byKey(const Key('edit-product-11'));
+    await tester.scrollUntilVisible(
+      lastProduct,
+      200,
+      scrollable: productScroll,
+    );
+    await tester.pumpAndSettle();
+    expect(lastProduct.hitTestable(), findsOneWidget);
+    await tester.tap(lastProduct);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('product-name')), '焼きそば');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    final save = find.byKey(const Key('save-product'));
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    expect(save.hitTestable(), findsOneWidget);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      (await database.products()).singleWhere((p) => p.id == 'product-11').name,
+      '焼きそば',
+    );
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('レジ').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('product-search')), '焼きそば');
+    await tester.pumpAndSettle();
+    final tile = find.byKey(const Key('product-product-11'));
+    await tester.scrollUntilVisible(
+      tile,
+      100,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('product-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    expect(controller.order.lines.single.name, '焼きそば');
+    expect(controller.order.total, 500);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final size in [const Size(844, 390), const Size(667, 375)]) {
     testWidgets('横画面 $size で商品追加・明細の数量変更・会計を完了できる', (tester) async {
       tester.view.physicalSize = size;

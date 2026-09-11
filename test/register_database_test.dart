@@ -190,6 +190,72 @@ void main() {
     expect(order.total, 1100);
   });
 
+  test('カテゴリ変更前後の明細を個別に数量変更し、再接続・会計後も保持する', () async {
+    await add(yakisoba, count: 2);
+    const updated = Product(
+      id: 'yakisoba',
+      name: '焼きそば',
+      price: 500,
+      category: '麺類',
+    );
+    await database.saveProduct(updated);
+    final order = await add(updated, count: 2);
+    expect(order.lines.map((line) => line.category), ['フード', '麺類']);
+    expect(order.lines.map((line) => line.quantity), [2, 2]);
+
+    final changed = order
+        .changeQuantity(order.lines.first.key, -1)
+        .changeQuantity(order.lines.last.key, 1);
+    await database.saveOrder(order, changed);
+    Future<void> reconnect() async {
+      await database.close();
+      database = await RegisterDatabase.open(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: '${directory.path}/register.db',
+        clock: () => now,
+      );
+    }
+
+    await reconnect();
+    final restored = await database.order();
+    expect(restored.lines.map((line) => line.category), ['フード', '麺類']);
+    expect(restored.lines.map((line) => line.quantity), [1, 3]);
+    expect(restored.total, 2000);
+    await database.checkout(restored, 2000);
+    await reconnect();
+    final sale = (await allSales()).single;
+    expect(sale.lines.map((line) => line.category), ['フード', '麺類']);
+    expect(sale.lines.map((line) => line.quantity), [1, 3]);
+    expect(sale.total, 2000);
+    expect((await database.order()).lines, isEmpty);
+  });
+
+  test('商品名とカテゴリに区切り文字があっても異なる明細を混同しない', () async {
+    const first = Product(
+      id: 'yakisoba',
+      name: 'フード:焼きそば',
+      price: 500,
+      category: '祭',
+    );
+    const second = Product(
+      id: 'yakisoba',
+      name: 'フード',
+      price: 500,
+      category: '焼きそば:祭',
+    );
+    await database.saveProduct(first);
+    await add(first);
+    await database.saveProduct(second);
+    final order = await add(second);
+    final changed = order.changeQuantity(order.lines.last.key, 1);
+    await database.saveOrder(order, changed);
+    final restored = await database.order();
+    expect(restored.lines.map((line) => line.name), ['フード:焼きそば', 'フード']);
+    expect(restored.lines.map((line) => line.category), ['祭', '焼きそば:祭']);
+    expect(restored.lines.map((line) => line.quantity), [1, 2]);
+    expect(restored.total, 1500);
+  });
+
   test('空注文、負数価格、数量上限、金額上限を拒否する', () async {
     await expectLater(
       database.checkout(await database.order(), 0),
@@ -207,7 +273,7 @@ void main() {
           name: '焼きそば',
           unitPrice: 500,
           quantity: 999,
-          category: '',
+          category: 'フード',
         ),
       ],
     );

@@ -20,7 +20,22 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   String? _category;
-  String _query = '';
+  final _search = TextEditingController();
+
+  @override
+  void didUpdateWidget(covariant RegisterPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller.products.isEmpty) {
+      if (_search.text.isNotEmpty) _search.clear();
+      _category = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   Future<void> _add(Product product) async {
     try {
@@ -63,7 +78,7 @@ class _RegisterPageState extends State<RegisterPage> {
           .where(
             (p) =>
                 (selected == null || p.category == selected) &&
-                p.name.toLowerCase().contains(_query.toLowerCase()),
+                p.name.toLowerCase().contains(_search.text.toLowerCase()),
           )
           .toList();
       final content = Column(
@@ -87,9 +102,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 children: [
                                   Text(
                                     '商品を選択',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineMedium,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium,
                                   ),
                                   const SizedBox(height: 4),
                                   const Text(
@@ -115,8 +130,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                           child: TextField(
                             key: const Key('product-search'),
-                            onChanged: (value) =>
-                                setState(() => _query = value),
+                            controller: _search,
+                            onChanged: (_) => setState(() {}),
                             decoration: const InputDecoration(
                               hintText: '商品を検索',
                               prefixIcon: Icon(Icons.search),
