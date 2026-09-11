@@ -78,6 +78,23 @@ flutter build apk --debug
 flutter build ios --simulator --debug --no-codesign
 ```
 
+### WindowsでAndroidを実行する場合
+
+Androidのビルドには、現在のGradle 8.12と互換性のあるJDKを使用します。JDK 21での実行を推奨します。Android Studio付属のJDK 25をFlutterが自動選択すると、ビルドが `What went wrong: 25.0.3`（詳細は `JavaVersion.parse` の例外）で停止する場合があります。使用中のJavaは `flutter doctor -v` で確認できます。
+
+JDK 21をインストールした後、次の設定でFlutterが使用するJavaを指定します。インストール先は各PCの実際のパスに置き換えてください。この設定はそのPCのFlutterプロジェクト全体に適用されます。開いているIDEは設定後に再起動してください。
+
+```sh
+flutter config --jdk-dir "<JDK 21のインストール先>"
+flutter doctor -v
+flutter devices
+flutter run -d <device-id> --target lib/main.dart
+```
+
+エミュレータはAndroid StudioのDevice Manager、または `flutter emulators --launch <emulator-id>` で起動します。`flutter emulators` の仮想端末IDと、起動後の `flutter devices` に表示される実行用端末IDは異なります。通常アプリは `lib/main.dart` を指定して実行してください。
+
+参考：[GradleとJavaの互換性](https://docs.gradle.org/current/userguide/compatibility.html)、[Flutterで使用するJavaの指定](https://docs.flutter.dev/release/breaking-changes/android-java-gradle-migration-guide)。
+
 ## 構成
 
 - `lib/domain/models.dart`：商品・注文・売上のモデル、金額検証、集計
@@ -97,6 +114,14 @@ flutter build ios --simulator --debug --no-codesign
 - 初回実装時に両OSへインストールし、通常アプリの初期画面と表示を確認済み。追加した消去画面は上記の画面操作・統合テストで検証
 
 統合テストは商品登録、SQLiteの接続を閉じて再オープンした注文復元、横画面での数量増減・会計・釣り銭表示、縦画面への復帰、確定売上の再読込、売上消去後の商品・注文の保持、全消去後の初期状態を確認します。実機、OSによるプロセス強制終了、ストア配布・署名は未検証です。
+
+### Windowsでの追加確認（2026-09-11）
+
+- 環境：Windows 11、Flutter 3.41.2 / Dart 3.11.0、Temurin JDK 21.0.12.1、Gradle 8.12。
+- Java 25.0.3でのビルド失敗を再現し、FlutterのJDK設定を21へ変更して解消。初回ビルドで不足していたNDK 28.2.13676358・Build Tools 35.0.0・CMake 3.22.1も取得。
+- `flutter build apk --debug --target lib/main.dart --no-pub` と `flutter run --debug --no-pub -d <device-id> --target lib/main.dart`：成功。
+- Android 16（API 36）の10.1インチ仮想タブレット（1280×800、160dpi）で通常アプリをインストール・起動し、商品一覧と注文欄の初期表示を確認。確認時のAndroidRuntime / Flutterエラーログはなし。
+- このWindows環境での追加確認はビルドと通常起動まで。上記のローカル自動テスト・統合テスト・iOS検証は今回再実行していない。`flutter doctor -v` のAndroidライセンス状態不明の警告は残っているが、必要なSDKのライセンスはビルド中に受諾済みと判定され、ビルド・起動は成功した。
 
 ## 配布と現状の範囲
 
