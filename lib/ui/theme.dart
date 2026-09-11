@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../domain/models.dart';
 
 const ink = Color(0xFF172F38);
@@ -102,14 +103,14 @@ class Surface extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: lineColor),
+      side: const BorderSide(color: lineColor),
     ),
-    child: child,
+    clipBehavior: Clip.antiAlias,
+    child: Padding(padding: padding.add(const EdgeInsets.all(1)), child: child),
   );
 }
 

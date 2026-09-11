@@ -16,7 +16,15 @@ void main() {
     DeviceOrientation orientation,
   ) async {
     final landscape = orientation == DeviceOrientation.landscapeLeft;
-    await SystemChrome.setPreferredOrientations([orientation]);
+    if (const bool.fromEnvironment('EXTERNAL_TEST_ROTATION')) {
+      // Android 16+ tablets ignore app orientation locks. Let the host rotate
+      // the display, then verify the actual viewport below.
+      debugPrint(
+        'REGISTER_TEST_ROTATION:${landscape ? 'landscape' : 'portrait'}',
+      );
+    } else {
+      await SystemChrome.setPreferredOrientations([orientation]);
+    }
     for (var i = 0; i < 100; i++) {
       await tester.pump(const Duration(milliseconds: 100));
       final size = tester.view.physicalSize;

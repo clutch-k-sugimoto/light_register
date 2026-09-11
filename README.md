@@ -56,7 +56,21 @@ iOS・Android向けの出店用レジです。Flutterで画面と処理をアプ
 
 ## 開発・起動
 
-検証環境は Flutter 3.35.7 / Dart 3.9.2 です。iOSの最低バージョンは13.0、Androidの最低APIレベルは24です。
+開発環境は Flutter 3.47.3 / Dart 3.13.3 です。Flutterの対応範囲に合わせ、iOSの最低バージョンは15.0、Androidの最低APIレベルは24です。iOS 13・14は対象外になりました。更新後のiOSビルド・実行はMacでの再検証が必要です。
+
+| ツール | 更新後のバージョン |
+| --- | --- |
+| Flutter / Dart | 3.47.3 / 3.13.3 |
+| Gradle | 9.7.1（配布ZIPのSHA-256検証あり） |
+| Android Gradle Plugin（AGP） | 9.4.0 |
+| Kotlin | 2.4.20（AGPの組み込みKotlinを使用） |
+| Androidビルド用JDK | Oracle JDK 26.0.2.1 |
+| Android NDK | r30 / 30.0.16248370 |
+| Android Studio | Quail 4 / 2026.1.4 |
+
+AndroidのcompileSdk・targetSdkはFlutter既定値の36を使用します。Java・Kotlinの出力バイトコードは既存のJava 11相当を維持し、ビルドを実行するJDKとは区別します。Flutterプラグインとの互換性のため `android.newDsl=false` を設定しています。
+
+直接依存は `intl 0.20.3`、`path 1.9.1`、`sqflite 2.4.4`、`uuid 4.6.0`、開発用は `sqflite_common_ffi 2.4.3`、`flutter_lints 6.0.0` へ更新しました。間接依存の `material_color_utilities` と `test_api` はFlutter SDKの指定バージョンを使用します。別PCでは同じFlutterを導入し、`pubspec.lock` を保持して `flutter pub get` を実行してください。
 
 ```sh
 flutter pub get
@@ -73,19 +87,22 @@ flutter test
 # ネイティブSQLiteを含む端末・シミュレータ・エミュレータでの統合テスト
 flutter test integration_test/register_test.dart -d <device-id>
 
+# Android 16以降のタブレットなど、アプリから方向を固定できない端末
+dart run tool/test_android_integration.dart <device-id>
+
 # 開発用ビルド
-flutter build apk --debug
-flutter build ios --simulator --debug --no-codesign
+flutter build apk --debug --target lib/main.dart
+flutter build ios --simulator --debug --no-codesign --target lib/main.dart
 ```
 
 ### WindowsでAndroidを実行する場合
 
-Androidのビルドには、現在のGradle 8.12と互換性のあるJDKを使用します。JDK 21での実行を推奨します。Android Studio付属のJDK 25をFlutterが自動選択すると、ビルドが `What went wrong: 25.0.3`（詳細は `JavaVersion.parse` の例外）で停止する場合があります。使用中のJavaは `flutter doctor -v` で確認できます。
+Androidのビルドには、Gradle 9.7.1とJDK 26.0.2.1を使用します。使用中のJavaは `flutter doctor -v` で確認できます。以前のGradle 8.12で発生した `What went wrong: 25.0.3`（`JavaVersion.parse` の例外）は、旧Gradleと新しいJavaの組み合わせによる問題でした。
 
-JDK 21をインストールした後、次の設定でFlutterが使用するJavaを指定します。インストール先は各PCの実際のパスに置き換えてください。この設定はそのPCのFlutterプロジェクト全体に適用されます。開いているIDEは設定後に再起動してください。
+JDK 26.0.2.1をインストールした後、次の設定でFlutterが使用するJavaを指定します。インストール先は各PCの実際のパスに置き換えてください。この設定はそのPCのFlutterプロジェクト全体に適用されます。Android Studioから直接Gradleを実行する場合も、Gradle JDKを同じJDKに設定してください。開いているIDEは設定後に再起動してください。
 
 ```sh
-flutter config --jdk-dir "<JDK 21のインストール先>"
+flutter config --jdk-dir "<JDK 26.0.2.1のインストール先>"
 flutter doctor -v
 flutter devices
 flutter run -d <device-id> --target lib/main.dart
@@ -93,7 +110,9 @@ flutter run -d <device-id> --target lib/main.dart
 
 エミュレータはAndroid StudioのDevice Manager、または `flutter emulators --launch <emulator-id>` で起動します。`flutter emulators` の仮想端末IDと、起動後の `flutter devices` に表示される実行用端末IDは異なります。通常アプリは `lib/main.dart` を指定して実行してください。
 
-参考：[GradleとJavaの互換性](https://docs.gradle.org/current/userguide/compatibility.html)、[Flutterで使用するJavaの指定](https://docs.flutter.dev/release/breaking-changes/android-java-gradle-migration-guide)。
+Android 16以降を対象とするアプリでは、幅600dp以上の画面でアプリからの画面方向指定が無視されます。タブレットの統合テストは上記のDartスクリプトをプロジェクト直下で実行してください。PATH上の `flutter` と、`ANDROID_HOME`・`ANDROID_SDK_ROOT`・`android/local.properties` の順で見つけたSDKのADBを使い、端末を実際に回転させて画面サイズを検証します。終了時に元の回転設定を復元します。テスト中は対象端末をほかの操作に使用しないでください。アプリに方向固定の制限回避設定は追加していません。
+
+参考：[GradleとJavaの互換性](https://docs.gradle.org/current/userguide/compatibility.html)、[Flutterで使用するJavaの指定](https://docs.flutter.dev/release/breaking-changes/android-java-gradle-migration-guide)、[画面方向指定の制約](https://api.flutter.dev/flutter/services/SystemChrome/setPreferredOrientations.html)、[Flutterの対応OS](https://docs.flutter.dev/reference/supported-platforms)。
 
 ## 構成
 
@@ -103,8 +122,9 @@ flutter run -d <device-id> --target lib/main.dart
 - `lib/ui/`：レジ、商品管理、会計、売上の画面
 - `test/`：実SQLiteによる保存・会計検証とスマホ・タブレットの画面操作検証
 - `integration_test/`：iOS・Androidネイティブプラグインを通した操作・再接続検証
+- `tool/test_android_integration.dart`：ADBで画面を回転させるAndroid統合テスト実行スクリプト
 
-## 確認結果（2026-09-11）
+## 更新前の確認結果（2026-09-11、Flutter 3.35.7）
 
 - `flutter analyze`：指摘なし
 - ローカル自動テスト23件：成功（実SQLiteによる16件、スマホ・タブレット画面操作7件）。消去機能に加え、844×390・667×375の横画面で12商品を含む注文の数量変更・会計・釣り銭表示、画面回転時の注文・検索の保持、安全領域と文字1.3倍での操作を検証
@@ -115,13 +135,27 @@ flutter run -d <device-id> --target lib/main.dart
 
 統合テストは商品登録、SQLiteの接続を閉じて再オープンした注文復元、横画面での数量増減・会計・釣り銭表示、縦画面への復帰、確定売上の再読込、売上消去後の商品・注文の保持、全消去後の初期状態を確認します。実機、OSによるプロセス強制終了、ストア配布・署名は未検証です。
 
-### Windowsでの追加確認（2026-09-11）
+### 更新前のWindowsでの追加確認（2026-09-11、Flutter 3.41.2）
 
 - 環境：Windows 11、Flutter 3.41.2 / Dart 3.11.0、Temurin JDK 21.0.12.1、Gradle 8.12。
 - Java 25.0.3でのビルド失敗を再現し、FlutterのJDK設定を21へ変更して解消。初回ビルドで不足していたNDK 28.2.13676358・Build Tools 35.0.0・CMake 3.22.1も取得。
 - `flutter build apk --debug --target lib/main.dart --no-pub` と `flutter run --debug --no-pub -d <device-id> --target lib/main.dart`：成功。
 - Android 16（API 36）の10.1インチ仮想タブレット（1280×800、160dpi）で通常アプリをインストール・起動し、商品一覧と注文欄の初期表示を確認。確認時のAndroidRuntime / Flutterエラーログはなし。
 - このWindows環境での追加確認はビルドと通常起動まで。上記のローカル自動テスト・統合テスト・iOS検証は今回再実行していない。`flutter doctor -v` のAndroidライセンス状態不明の警告は残っているが、必要なSDKのライセンスはビルド中に受諾済みと判定され、ビルド・起動は成功した。
+
+## バージョン更新後の確認結果（2026-09-11、Windows）
+
+- 上記のFlutter 3.47.3 / Dart 3.13.3 / JDK 26.0.2.1 / Gradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK r30で検証。Android Studioは既に2026.1.4だったため再インストールしていない。
+- `flutter analyze --no-pub`：指摘なし。更新したFlutterで検出されたListTileの背景・タップ効果を隠す構造を、共通カードをMaterialに変更して修正した。
+- `flutter test --no-pub`：23件成功（SQLite関連16件・画面操作7件）。小型スマホの横画面・タブレット・文字拡大を含む既存の操作テストを再実行した。
+- `dart run tool/test_android_integration.dart <device-id>`：Android 16 / API 36の10.1インチタブレット（1280×800、160dpi）で成功。機内モードON・Wi-Fi OFFで、商品登録、注文復元、実際の画面回転、数量増減、会計・釣り銭、売上復元、売上消去、全消去を検証。独立した一時DBを使用し、終了後に通信・回転設定を復元した。
+- Gradleの構成チェックが成功し、`kotlinCompilerClasspath` が2.4.20へ解決されることを確認。AGPより先に古いKotlinが読み込まれないよう、Kotlinの依存指定を `android/settings.gradle.kts` に配置した。
+- 統合テスト後に `flutter build apk --debug --target lib/main.dart --no-pub`：成功。
+- 通常の `lib/main.dart` をエミュレータへインストールして起動し、10.1インチ横画面の商品選択・注文欄の初期表示を確認。デバッガを切り離してアプリを起動状態で残した。確認時のFlutter / AndroidRuntimeエラーログはなし。
+- `flutter doctor -v`：Android toolchain正常、Androidライセンス受諾済み。Windowsデスクトップ用Visual Studioの未導入のみ指摘されるが、このプロジェクトの対象OSには含めていない。
+- 残る警告はGradleのJava native access、およびFlutterが使用するAGPの旧DSL・既存Jetifier設定の非推奨通知。ビルド失敗は発生していない。
+
+iOSの最低バージョン設定はFlutterの移行処理に合わせ15.0へ更新し、plistのXML構文を確認した。WindowsではXcode/CocoaPodsを実行できないため、更新後のiOSビルド・統合テストと `ios/Podfile.lock` の再生成は未実施。Macでは `flutter pub get` の後に `cd ios && pod install` を実行し、プロジェクト直下へ戻ってiOSビルド・統合テストを行うこと。実機・ストア配布・署名も未検証。
 
 ## 配布と現状の範囲
 

@@ -46,9 +46,9 @@
 
 ## 開発環境と検証
 
-- 既存の検証環境はFlutter 3.35.7 / Dart 3.9.2。環境を再現する場合はこのバージョンを基準とし、更新が必要な場合は互換性を確認する。
+- 現在の開発環境はFlutter 3.47.3 / Dart 3.13.3。環境を再現する場合はこのバージョンを基準とし、更新が必要な場合は互換性を確認する。最低対応OSはiOS 15.0・Android API 24。以前のバージョンでの検証は `README.md` の履歴と区別する。
 - 別PCでは `flutter --version` と `flutter doctor` で環境を確認し、`flutter pub get` で依存関係を取得する。理由なく依存関係やロックファイルを更新しない。
-- AndroidビルドではGradleとJDKの互換性を確認する。現在のGradle 8.12ではJDK 21を推奨し、JDK 25は使用しない。`flutter doctor -v` で実際に選択されたJavaを確認する。設定方法は `README.md` の「WindowsでAndroidを実行する場合」を参照する。
+- AndroidビルドではGradleとJDKの互換性を確認する。現在はGradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / JDK 26.0.2.1 / NDK 30.0.16248370を使用する。KotlinはAGP組み込み機能を使用し、Flutterとの互換性のため `android.newDsl=false` を維持する。`flutter doctor -v` で実際に選択されたJavaを確認する。設定方法は `README.md` の「WindowsでAndroidを実行する場合」を参照する。
 - 個人の絶対パス、Flutter SDKの設置場所、シミュレータIDを固定しない。実行対象は `flutter devices` で確認する。iOSのビルド・実行にはMacとXcodeが必要である。
 - Dartコードを変更した場合は変更ファイルを整形し、静的解析と影響範囲に応じたテストを実行する。バグ修正では、可能な範囲で実際の再現シナリオを回帰テストにする。
 - 画面のテストでは、表示の存在確認だけでなく、タップ・スクロール・数量・会計結果など、変更対象の操作と結果を確認する。横画面の既存回帰ケースは844×390・667×375、画面回転、安全領域、文字1.3倍を含む。
@@ -63,12 +63,14 @@ flutter analyze
 flutter test
 flutter test test/landscape_test.dart
 flutter test integration_test/register_test.dart -d DEVICE_ID
+dart run tool/test_android_integration.dart DEVICE_ID
 flutter build apk --debug --target lib/main.dart
 flutter build ios --simulator --debug --no-codesign --target lib/main.dart
 git diff --check
 ```
 
 - Flutterのネイティブ統合テスト・ビルドは並行実行せず、順番に実行する。
+- Android 16以降のタブレットでは `SystemChrome.setPreferredOrientations` が無視されるため、ADBから回転する `tool/test_android_integration.dart` を使用する。通常の統合テストコマンドと両方実行する必要はない。スクリプトは回転設定を終了時に復元する。
 - 統合テスト後に通常起動用のアプリを渡す場合は、`--target lib/main.dart` を指定して再ビルドする。統合テストが生成したテスト用アプリを通常版として渡さない。
 - テストには独立した一時DBを使用し、利用者の実データを消去しない。検証のために変更したエミュレータの通信設定などは、完了後に元へ戻す。
 
