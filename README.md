@@ -97,6 +97,8 @@ fvm exec dart run tool/test_android_integration.dart <device-id>
 
 SQLiteプラグインを使用するため、対象はiOS・Androidです。Web向けの実装はありません。
 
+iOSのネイティブ依存関係はSwift Package Managerで管理します。現在の依存構成ではCocoaPodsは不要で、`pod install` は実行しません。`fvm flutter pub get` の後、下記のiOSビルド・統合テストを実行すると必要なSwift Packageが生成・解決されます。プラグインを追加する場合は、そのiOS実装のSwift Package Manager対応を確認してください。
+
 ```sh
 # 静的解析とローカル自動テスト
 flutter analyze
@@ -201,6 +203,19 @@ iOSの最低バージョン設定はFlutterの移行処理に合わせ15.0へ更
 - 統合テスト後に `flutter build apk --debug --target lib/main.dart --no-pub`：成功。通常APKをインストール・起動し、横画面のレジ初期表示を確認。確認時のアプリプロセスのFlutter / AndroidRuntimeエラーログはなし。GradleのJava native access警告は引き続き出力される。
 
 今回の修正後のiOSビルド・統合テストは、Windows環境のため未実施。実機検証も未実施。
+
+## iOSのCocoaPods連携の削除（2026-09-17）
+
+- Flutter 3.47.3が表示する「All plugins found for ios are Swift Packages, but your project still has CocoaPods integration」は、Swift Package Manager対応済みのプロジェクトにCocoaPodsの設定が残っているという移行案内であり、ビルド失敗を示すメッセージではない。`Podfile` のテンプレートとの差は `platform :ios, '15.0'` のコメント解除のみだった。独自のPod依存・移植が必要な追加処理はなかった。
+- `integration_test`・`sqflite_darwin` のSwift Package対応と既存の連携設定を確認し、`pod deintegrate`、Podfile・ロックファイル・生成ディレクトリの削除、Debug/Releaseのxcconfig・workspaceに残るPods参照の削除を実施した。iOSの最低バージョン15.0と既存のSwift Package Manager連携は維持している。手順は[Flutter公式の移行ガイド](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers#how-to-remove-cocoapods-integration)に基づく。
+- `fvm flutter clean` と `fvm flutter pub get --enforce-lockfile` で生成物を作り直した。ライブラリのバージョンと `pubspec.lock` は変更なし。
+- 検証環境：macOS 26.7、Xcode 27.0、Flutter 3.47.3 / Dart 3.13.3。iPhone 17 / iOS 26.5シミュレータで既存の統合テストが成功し、注文復元、画面回転、数量変更、会計・釣り銭、売上復元・消去、全消去を独立した一時DBで確認した。
+- 通常の `lib/main.dart` を指定したiOSシミュレータ向けdebugビルドと、実機向けの署名なしreleaseビルドが成功。いずれもCocoaPodsの移行案内や `pod install` の実行は発生しなかった。通常起動用アプリをシミュレータへインストール・起動し、レジの初期画面の表示も確認した。
+- `xcodebuild build-for-testing` により、CocoaPods参照を削除した `RunnerTests` ターゲットもコンパイル・リンクできることを確認した。このコマンドではXCTest自体は実行していない。Xcode 27.0付属のXCTestがiOS 17.0向けで、テストターゲットの最低OSが15.0であることによるリンク警告は残っている。これはCocoaPodsの移行案内とは別の警告であり、アプリの最低対応OSは変更していない。
+
+今回の検証では実機へのインストール・実機での動作・配布署名は確認していない。Android設定とDartコードは変更しておらず、Androidの再ビルド・テストは実行していない。
+
+同日、続けて `origin/main` の `b7b280b`（検索状態・カテゴリ別明細・横画面の商品管理の修正）を取り込み、CocoaPods移行の変更を保持した。READMEの追記箇所の競合は双方の記録を残して解消した。取り込み後に `fvm flutter analyze --no-pub` は指摘なし、`fvm flutter test --no-pub --reporter expanded` は27件すべて成功し、`git diff --check` も成功した。上記のiOSビルド・統合テストは取り込み前の `cdff2f2` にCocoaPods移行を適用した状態での結果であり、リモート取り込み後には再実行していない。
 
 ## 配布と現状の範囲
 
