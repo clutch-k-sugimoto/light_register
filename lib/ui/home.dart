@@ -148,12 +148,6 @@ class _RegisterHomeState extends State<RegisterHome> {
                 onPressed: _info,
                 icon: const Icon(Icons.phonelink_lock_rounded),
               ),
-            IconButton(
-              key: const Key('data-management'),
-              tooltip: 'データ管理',
-              onPressed: widget.controller.busy ? null : _manageData,
-              icon: const Icon(Icons.settings_outlined),
-            ),
             const SizedBox(width: 12),
           ],
         ),
@@ -169,6 +163,17 @@ class _RegisterHomeState extends State<RegisterHome> {
                   labelType: NavigationRailLabelType.all,
                   groupAlignment: -0.85,
                   indicatorColor: const Color(0xFFFFE3B8),
+                  scrollable: true,
+                  trailingAtBottom: true,
+                  trailing: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: IconButton(
+                      key: const Key('data-management'),
+                      tooltip: 'データ管理',
+                      onPressed: widget.controller.busy ? null : _manageData,
+                      icon: const Icon(Icons.settings_outlined),
+                    ),
+                  ),
                   destinations: const [
                     NavigationRailDestination(
                       icon: Icon(Icons.grid_view_outlined),
@@ -233,22 +238,34 @@ class _RegisterHomeState extends State<RegisterHome> {
             ? null
             : NavigationBar(
                 selectedIndex: _tab,
-                onDestinationSelected: _selectTab,
-                destinations: const [
-                  NavigationDestination(
+                onDestinationSelected: (value) {
+                  if (value == 3) {
+                    if (!widget.controller.busy) _manageData();
+                    return;
+                  }
+                  _selectTab(value);
+                },
+                destinations: [
+                  const NavigationDestination(
                     icon: Icon(Icons.grid_view_outlined),
                     selectedIcon: Icon(Icons.grid_view_rounded),
                     label: 'レジ',
                   ),
-                  NavigationDestination(
+                  const NavigationDestination(
                     icon: Icon(Icons.sell_outlined),
                     selectedIcon: Icon(Icons.sell_rounded),
                     label: '商品管理',
                   ),
-                  NavigationDestination(
+                  const NavigationDestination(
                     icon: Icon(Icons.bar_chart_outlined),
                     selectedIcon: Icon(Icons.bar_chart_rounded),
                     label: '売上',
+                  ),
+                  NavigationDestination(
+                    key: const Key('data-management'),
+                    enabled: !widget.controller.busy,
+                    icon: const Icon(Icons.settings_outlined),
+                    label: 'データ管理',
                   ),
                 ],
               ),

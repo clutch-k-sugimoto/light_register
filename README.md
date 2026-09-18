@@ -30,7 +30,7 @@ iOS・Android向けの出店用レジです。Flutterで画面と処理をアプ
 
 ## データの消去
 
-画面右上の歯車アイコン「データ管理」から操作します。対象を選び、確認画面の消去ボタンを押すと実行します。「キャンセル」では何も変更しません。
+メニューの歯車アイコン「データ管理」から操作します。画面幅1000以上では左サイドメニューの最下部、それ未満では下部メニューの右端に配置します。縦横どちらでも同じ幅の基準を使います。データ管理を閉じると元の画面へ戻ります（データ全消去に成功した場合はレジへ戻ります）。対象を選び、確認画面の消去ボタンを押すと実行します。「キャンセル」では何も変更しません。
 
 | 操作 | 消去するデータ | 残るデータ |
 | --- | --- | --- |
@@ -64,9 +64,9 @@ iOS・Android向けの出店用レジです。Flutterで画面と処理をアプ
 | Gradle | 9.7.1（配布ZIPのSHA-256検証あり） |
 | Android Gradle Plugin（AGP） | 9.4.0 |
 | Kotlin | 2.4.20（AGPの組み込みKotlinを使用） |
-| Androidビルド用JDK | Windows：Oracle JDK 26.0.2.1 / Mac：Android Studio付属のOpenJDK 21.0.8 |
+| Androidビルド用JDK | Windows：Oracle JDK 26.0.2.1 / Mac：Android Studio付属のOpenJDK 25.0.3 |
 | Android NDK | r30 / 30.0.16248370 |
-| Android Studio | Windows：Quail 4 / 2026.1.4 / Mac：2025.2 |
+| Android Studio | Windows・Mac：Quail 4 / 2026.1.4 |
 
 AndroidのcompileSdk・targetSdkはFlutter既定値の36を使用します。Java・Kotlinの出力バイトコードは既存のJava 11相当を維持し、ビルドを実行するJDKとは区別します。Flutterプラグインとの互換性のため `android.newDsl=false` を設定しています。
 
@@ -114,6 +114,18 @@ dart run tool/test_android_integration.dart <device-id>
 flutter build apk --debug --target lib/main.dart
 flutter build ios --simulator --debug --no-codesign --target lib/main.dart
 ```
+
+### MacでAndroid Studioを更新した場合
+
+現在のMac環境では、FlutterがAndroid Studio付属のJDK 25.0.3を自動選択します。`fvm flutter doctor -v` でJavaの実行パスとバージョン、Android SDK、ライセンス状態を確認してください。[GradleのJava対応表](https://docs.gradle.org/current/userguide/compatibility.html#java_runtime)ではJava 25の実行にGradle 9.1.0以降が対応しています。現在のGradle 9.7.1でビルドできるため、Android Studioの更新だけを理由にGradle・AGP・Kotlin・Flutterの固定バージョンを変更する必要はありません。
+
+```sh
+fvm flutter doctor -v
+fvm flutter pub get --enforce-lockfile
+fvm flutter build apk --debug --target lib/main.dart --no-pub
+```
+
+`flutter config --jdk-dir` はFlutter全体の設定に影響するため、自動選択が正常な場合は実行しません。Android StudioからGradleを直接実行する場合も、プロジェクトのGradle JDKにAndroid Studio付属のJDKを指定してください。各PCの絶対パスはGit管理対象の設定に記載しません。Java・Kotlinの出力バイトコードは引き続きJava 11相当です。
 
 ### WindowsでAndroidを実行する場合
 
@@ -216,6 +228,18 @@ iOSの最低バージョン設定はFlutterの移行処理に合わせ15.0へ更
 今回の検証では実機へのインストール・実機での動作・配布署名は確認していない。Android設定とDartコードは変更しておらず、Androidの再ビルド・テストは実行していない。
 
 同日、続けて `origin/main` の `b7b280b`（検索状態・カテゴリ別明細・横画面の商品管理の修正）を取り込み、CocoaPods移行の変更を保持した。READMEの追記箇所の競合は双方の記録を残して解消した。取り込み後に `fvm flutter analyze --no-pub` は指摘なし、`fvm flutter test --no-pub --reporter expanded` は27件すべて成功し、`git diff --check` も成功した。上記のiOSビルド・統合テストは取り込み前の `cdff2f2` にCocoaPods移行を適用した状態での結果であり、リモート取り込み後には再実行していない。
+
+## Android Studio更新後のMac環境確認（2026-09-18）
+
+- MacのAndroid Studioが2025.2からQuail 4 / 2026.1.4、付属JDKが21.0.8から25.0.3へ更新されていることを確認した。Android Studioのビルド番号は `AI-261.26222.65.2614.16204760`。更新済みのインストールを使用し、この作業ではAndroid Studio自体の再インストールやFlutter全体のJDK設定変更は行っていない。
+- `fvm flutter doctor -v`：指摘なし。付属JDK 25.0.3の自動選択、Android SDKのAPI 36・導入済みBuild-Tools 36.1.0、Androidライセンス受諾済みを確認した。Emulatorは37.1.11、Platform-Toolsは37.0.1、Command-line Toolsは23.0。
+- 付属JDKを指定した `./gradlew --version` でGradle 9.7.1の起動を確認した。Gradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK 30.0.16248370とFlutter 3.47.3の固定バージョンは維持。`fvm flutter pub get --enforce-lockfile` は成功し、`pubspec.lock` の変更はない。
+- `fvm flutter analyze --no-pub`：指摘なし。`fvm flutter test --no-pub --reporter expanded`：28件すべて成功。前回のデータ管理アイコン移動の未コミット変更も保持して検証した。
+- Android 16 / API 36のPixel 8 Pro相当の一時AVDを作り、機内モードON・Wi-Fi OFFで `fvm exec dart run tool/test_android_integration.dart <device-id>` が成功。独立した一時DBで注文・売上の復元、実際の画面回転、数量変更、会計・釣り銭、売上消去・全消去を確認した。終了後に回転・通信設定を復元し、一時AVDを終了・削除した。作業前から起動していたAVDはそのまま保持した。
+- 統合テスト後に `fvm flutter build apk --debug --target lib/main.dart --no-pub` が成功。通常起動用APKを一時AVDへインストールし、オフラインでレジの初期画面と下部メニュー右端のデータ管理を確認した。確認したFlutter / AndroidRuntimeのエラーログはなし。APKのminSdkは24、compileSdk・targetSdkは36を維持している。
+- 残るビルド警告はGradleランチャーのJava native access通知。今回のビルド・テストではエラーになっていない。
+
+通常起動用APKは `build/app/outputs/flutter-apk/app-debug.apk`。今回の作業ではiOS・Windows・実機・releaseビルド・配布署名は再検証していない。
 
 ## 配布と現状の範囲
 

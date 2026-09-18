@@ -169,6 +169,82 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('データ管理は縦横のメニュー末尾から開き、閉じても選択画面と注文を保持する', (tester) async {
+    tester.view.physicalSize = const Size(1194, 834);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    await seedSaleAndOrder();
+    final draft = controller.order.toMap();
+    await tester.pumpWidget(RegisterApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('売上').last);
+    await tester.pumpAndSettle();
+
+    for (final layout in [
+      (size: const Size(1194, 834), sidebar: true),
+      (size: const Size(834, 1194), sidebar: false),
+      (size: const Size(1024, 1366), sidebar: true),
+      (size: const Size(390, 844), sidebar: false),
+      (size: const Size(667, 375), sidebar: false),
+    ]) {
+      tester.view.physicalSize = layout.size;
+      tester.view.padding = layout.size.width > layout.size.height
+          ? const FakeViewPadding(left: 44, right: 44, bottom: 21)
+          : const FakeViewPadding(top: 47, bottom: 34);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final management = find.byKey(const Key('data-management'));
+      expect(management.hitTestable(), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: management),
+        findsNothing,
+      );
+      final navigation = find.byType(
+        layout.sidebar ? NavigationRail : NavigationBar,
+      );
+      expect(
+        find.descendant(of: navigation, matching: management),
+        findsOneWidget,
+      );
+      final navigationRect = tester.getRect(navigation);
+      final managementRect = tester.getRect(management);
+      expect(navigationRect.contains(managementRect.center), isTrue);
+      if (layout.sidebar) {
+        expect(navigationRect.bottom - managementRect.bottom, closeTo(12, 0.1));
+      } else {
+        final salesIcon = find.descendant(
+          of: navigation,
+          matching: find.byIcon(Icons.bar_chart_rounded),
+        );
+        expect(
+          managementRect.center.dx,
+          greaterThan(tester.getCenter(salesIcon).dx),
+        );
+      }
+
+      await tester.tap(management);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('delete-sales')), findsOneWidget);
+      expect(find.byKey(const Key('delete-all-data')), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('close-data-management')),
+      );
+      await tester.tap(find.byKey(const Key('close-data-management')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('delete-sales')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('sales-total'))).data,
+        '¥500',
+      );
+      expect(controller.order.toMap(), draft);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('売上消去は確認でキャンセルでき、実行時は売上表示だけを即座に更新する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

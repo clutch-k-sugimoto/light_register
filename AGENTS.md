@@ -28,6 +28,7 @@
 - 検索欄の表示と絞り込み条件を一致させる。販売中の商品がなくなった場合は検索・カテゴリの選択をリセットし、その後登録した商品を表示する。
 - 売上記録消去は、表示期間にかかわらず全期間の売上・会計明細を消去し、登録商品・販売終了商品・未会計注文を残す。
 - データ全消去は、商品・未会計注文・全期間の売上を消去し、新しいIDの空の注文で再開する。消去の確認・キャンセル、失敗時のデータ保持、成功後の画面更新を維持する。
+- データ管理は、画面幅1000以上では左サイドメニュー最下部、それ未満では下部メニュー右端から開く。縦横とも同じ幅の基準を使い、ダイアログを閉じると元の画面・注文を保持する（データ全消去成功時はレジへ戻る）。
 - スマートフォン・タブレットの縦横画面で、商品選択・数量変更・会計を操作できることを確認する。固定領域が明細の高さを使い切らないようにし、高さが足りない場合はスクロールで各操作に到達できるようにする。商品管理では横画面でのキーボード表示中もレイアウトを保ち、編集・保存できることを確認する。
 
 ## 作業開始時の確認
@@ -52,7 +53,7 @@
 - 別PCでは `flutter --version` と `flutter doctor` で環境を確認し、`flutter pub get` で依存関係を取得する。理由なく依存関係やロックファイルを更新しない。
 - `.fvmrc` はFlutter 3.47.3を指定している。FVMを使う場合はプロジェクト直下でSDKを準備し、下記コマンドの `flutter`・`dart` を `fvm flutter`・`fvm dart` に読み替える。Android統合テスト用スクリプトは子プロセスにもSDKを適用するため `fvm exec dart run tool/test_android_integration.dart DEVICE_ID` を使う。ホーム階層や他プロジェクトのSDK設定を変更しない。
 - iOSのネイティブ依存関係はSwift Package Managerで管理する。現在の構成では `Podfile`・`Podfile.lock`・Pods参照は不要で、`pod install` は実行しない。新しいプラグインを追加する場合はiOS実装のSwift Package Manager対応を確認し、生成される `ios/Flutter/ephemeral/` はGitに追加しない。
-- AndroidビルドではGradleとJDKの互換性を確認する。現在はGradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK 30.0.16248370を使用する。ビルド用JDKはWindowsで26.0.2.1、MacでAndroid Studio付属の21.0.8を使用する。KotlinはAGP組み込み機能を使用し、Flutterとの互換性のため `android.newDsl=false` を維持する。`flutter doctor -v` で実際に選択されたJavaを確認する。設定方法は `README.md` の「WindowsでAndroidを実行する場合」を参照する。
+- AndroidビルドではGradleとJDKの互換性を確認する。現在はGradle 9.7.1 / AGP 9.4.0 / Kotlin 2.4.20 / NDK 30.0.16248370を使用する。ビルド用JDKはWindowsで26.0.2.1、MacでAndroid Studio 2026.1.4付属の25.0.3を使用する。KotlinはAGP組み込み機能を使用し、Flutterとの互換性のため `android.newDsl=false` を維持する。`flutter doctor -v` で実際に選択されたJavaを確認する。MacではAndroid Studio付属のJDKが自動選択されることを確認し、正常な場合はFlutter全体の `jdk-dir` 設定を変更しない。環境別の手順は `README.md` の「MacでAndroid Studioを更新した場合」「WindowsでAndroidを実行する場合」を参照する。
 - 個人の絶対パス、Flutter SDKの設置場所、シミュレータIDを固定しない。実行対象は `flutter devices` で確認する。iOSのビルド・実行にはMacとXcodeが必要である。
 - Dartコードを変更した場合は変更ファイルを整形し、静的解析と影響範囲に応じたテストを実行する。バグ修正では、可能な範囲で実際の再現シナリオを回帰テストにする。
 - 画面のテストでは、表示の存在確認だけでなく、タップ・スクロール・数量・会計結果など、変更対象の操作と結果を確認する。横画面の既存回帰ケースは844×390・667×375、画面回転、安全領域、文字1.3倍を含む。
